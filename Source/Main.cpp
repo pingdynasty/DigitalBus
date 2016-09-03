@@ -230,11 +230,12 @@ public:
     unsigned char buf[bufferSize];
     ssize_t len;
     int frompos;
+    bus.sendReset();
     while(m_running) {
       len = read(m_fd, buf, bufferSize);
       fifo.push(buf, len);
       while(fifo.getAvailable() >= 4){
-	std::cout << ".";
+	std::cout << ">";
 	fifo.pop(buf, 4);
 	bus.readBusFrame(buf);
       }
@@ -402,6 +403,7 @@ int main(int argc, char* argv[]) {
 }
 
 void serial_write(uint8_t* data, size_t len){
+  std::cout << "<[" << len << "]" << std::endl;
   service.writeSerial(data, len);
 }
 

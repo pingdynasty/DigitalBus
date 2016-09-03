@@ -40,6 +40,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_PARAMETER:
+    std::cout << "param [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
@@ -50,6 +51,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_BUTTON:
+    std::cout << "btn [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
@@ -59,6 +61,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_COMMAND:
+    std::cout << "cmd [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
@@ -68,6 +71,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_MESSAGE:
+    std::cout << "msg [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
@@ -93,6 +97,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_DATA:
+    std::cout << "data [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
@@ -121,10 +126,17 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     }
     break;
   case OWL_COMMAND_SYNC:
+    std::cout << "sync [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     // 0xc0 until 0xff at end of frame
     // use ASCII SYN instead?
+    break;
+  case OWL_COMMAND_RESET:
+    std::cout << "rst [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
+    if(nuid != NO_UID) // propagate
+      sendFrame(frame);
+    reset();
     break;
   default:
     rxError("Invalid message");
