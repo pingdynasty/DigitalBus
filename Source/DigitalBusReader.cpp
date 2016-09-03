@@ -17,7 +17,9 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     // if(nuid == NO_UID)
     //   return rxError("Out of sequence message");
     readMidiFrame(frame);
+#ifdef DIGITAL_BUS_PROPAGATE_MIDI
     sendFrame(frame); // warning: circular propagation!
+#endif
     break;
   case OWL_COMMAND_DISCOVER:
     std::cout << "disco [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
@@ -26,13 +28,13 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_ENUM:
     std::cout << "enum [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(peers == 0)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence enum message");
     handleEnum(id, frame[1], frame[2], frame[3]);
     break;
   case OWL_COMMAND_IDENT:
     std::cout << "ident [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence ident message");
     if(id != uid){
       handleIdent(id, frame[1], frame[2], frame[3]);
       if(id != nuid) // propagate
@@ -42,7 +44,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_PARAMETER:
     std::cout << "param [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence parameter message");
     if(id != uid){
       // it's not from us: process
       handleParameterChange(frame[1], (frame[2]<<8) | frame[3]);
@@ -53,7 +55,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_BUTTON:
     std::cout << "btn [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence button message");
     if(id != uid){
       handleButtonChange(frame[1], (frame[2]<<8) | frame[3]);
       if(id != nuid) // propagate
@@ -63,7 +65,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_COMMAND:
     std::cout << "cmd [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence command message");
     if(id != uid){
       handleCommand(frame[1], (frame[2]<<8) | frame[3]);
       if(id != nuid) // propagate
@@ -99,7 +101,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_DATA:
     std::cout << "data [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence data message");
     if(id != uid){
       if(txuid == NO_UID)
 	txuid = id;
@@ -128,7 +130,7 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   case OWL_COMMAND_SYNC:
     std::cout << "sync [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
-      return rxError("Out of sequence message");
+      return rxError("Out of sequence sync message");
     // 0xc0 until 0xff at end of frame
     // use ASCII SYN instead?
     break;

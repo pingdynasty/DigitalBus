@@ -23,6 +23,7 @@
  */
 
 void serial_write(uint8_t* data, size_t len);
+void midi_write(uint8_t* data, size_t len);
 
 class MyFifo {
 public:
@@ -93,6 +94,8 @@ private:
 public:
 
   void writeSerial(uint8_t* data, size_t len){
+    if(m_verbose)
+      std::cout << "tx uart " << m_port << " [" << (int)len << "]" << std::endl;
     if(write(m_fd, data, len) != len)
       perror(m_port.toUTF8());
   }
@@ -148,17 +151,17 @@ public:
 //       handlePartialSysexMessage(source, msg.getRawData(), msg.getRawDataSize(), msg.getTimeStamp());
 //     }else{
       if(m_verbose)
-	std::cout << "tx " << m_port << ": " << print(msg) << std::endl;
+	std::cout << "rx midi: " << print(msg) << std::endl;
       const uint8_t* data = msg.getRawData();
       switch(msg.getRawDataSize()){
       case 3:
-	writeSerial(data[0]>>8, data[0], data[1], data[2]);
+	writeSerial(data[0]>>4, data[0], data[1], data[2]);
 	break;
       case 2:
-	writeSerial(data[0]>>8, data[0], data[1], 0);
+	writeSerial(data[0]>>4, data[0], data[1], 0);
 	break;
       case 1:
-	writeSerial(data[0]>>8, data[0], 0, 0);
+	writeSerial(data[0]>>4, data[0], 0, 0);
 	break;
       }
 //     }
@@ -168,12 +171,20 @@ public:
   void handlePartialSysexMessage(MidiInput* source, const uint8* data,
 				 int size, double timestamp){
     if(m_verbose)
-      std::cout << "tx " << m_port << ": " << " sysex " << size << " bytes" << std::endl;
+      std::cout << "rx midi: " << " sysex " << size << " bytes" << std::endl;
     sysexbuf.write(data, size);
     if(data[size-1] == SYSEX_EOX){
       writeSysex((uint8_t*)sysexbuf.getData(), sysexbuf.getDataSize());
       sysexbuf.reset();
     }
+  }
+
+  void writeMidi(uint8_t* data, size_t len){
+    MidiMessage msg(data, len);
+    if(m_verbose)
+      std::cout << "tx midi: " << print(msg) << std::endl;
+    if(m_midiout != NULL)
+      m_midiout->sendMessageNow(msg);
   }
 
   void usage(){
@@ -235,8 +246,8 @@ public:
       len = read(m_fd, buf, bufferSize);
       fifo.push(buf, len);
       while(fifo.getAvailable() >= 4){
-	std::cout << ">";
 	fifo.pop(buf, 4);
+	std::cout << "> [0x"<< std::hex << (int)buf[0] << " 0x" << (int)buf[1] << " 0x" << (int)buf[2] << " 0x" << (int)buf[3] << "]" << std::endl;
 	bus.readBusFrame(buf);
       }
 //       frompos = 0;
@@ -403,8 +414,11 @@ int main(int argc, char* argv[]) {
 }
 
 void serial_write(uint8_t* data, size_t len){
-  std::cout << "<[" << len << "]" << std::endl;
   service.writeSerial(data, len);
+}
+
+void midi_write(uint8_t* data, size_t len){
+  service.writeMidi(data, len);
 }
 
 
