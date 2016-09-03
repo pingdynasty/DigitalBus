@@ -3,7 +3,7 @@
 #include "bus.h"
 #include <string.h>
 
-extern "C" void serial_write(uint8_t* data, size_t len);
+void serial_write(uint8_t* data, size_t len);
 
 DigitalBusHandler::DigitalBusHandler() 
   : uid(0), nuid(NO_UID), token(NO_TOKEN), peers(0), 

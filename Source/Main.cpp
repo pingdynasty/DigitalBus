@@ -22,7 +22,7 @@
  * DigitalBus -p /dev/ttyp0
  */
 
-extern "C" void serial_write(uint8_t* data, size_t len);
+void serial_write(uint8_t* data, size_t len);
 
 class MyFifo {
 public:

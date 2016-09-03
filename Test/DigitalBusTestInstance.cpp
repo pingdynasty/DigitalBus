@@ -7,7 +7,7 @@
 #undef _MidiHandler_h_
 #define __SERIAL_H
 
-void serial_write(uint8_t* data, uint16_t size);
+void serial_write(uint8_t* data, size_t size);
 
 #include "DigitalBusHandler.cpp"
 #include "DigitalBusReader.cpp"

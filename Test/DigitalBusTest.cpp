@@ -1,5 +1,5 @@
 /*
-  g++ -ISource -I/opt/local/include -L/opt/local/lib -std=c++11 Source/DigitalBusTest.cpp -lboost_unit_test_framework -o DigitalBusTest && ./DigitalBusTest
+  g++ -ISource -I/opt/local/include -L/opt/local/lib -ISource -std=gnu++11 Test/DigitalBusTest.cpp -lboost_unit_test_framework -o DigitalBusTest && ./DigitalBusTest
 */
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_MODULE Test
@@ -72,7 +72,7 @@ void bus_setup(){
   data = NULL;
 }
 
-void Bus1::serial_write(uint8_t* data, uint16_t size){
+void Bus1::serial_write(uint8_t* data, size_t size){
   BOOST_CHECK_EQUAL(size, 4);
   // debug << "bus1 [" << (int)data[0] << "][" << (int)data[1] << "][" << (int)data[2] << "]["  << (int)data[3] << "]\r\n" ;
   if(buscount == 0)
@@ -81,7 +81,7 @@ void Bus1::serial_write(uint8_t* data, uint16_t size){
     Bus2::bus.readBusFrame(data);
 }
 
-void Bus2::serial_write(uint8_t* data, uint16_t size){
+void Bus2::serial_write(uint8_t* data, size_t size){
   // debug << "bus2 [" << (int)data[0] << "][" << (int)data[1] << "][" << (int)data[2] << "]["  << (int)data[3] << "]\r\n" ;
   BOOST_CHECK_EQUAL(size, 4);
   if(buscount == 2)
@@ -90,7 +90,7 @@ void Bus2::serial_write(uint8_t* data, uint16_t size){
     Bus3::bus.readBusFrame(data);
 }
 
-void Bus3::serial_write(uint8_t* data, uint16_t size){
+void Bus3::serial_write(uint8_t* data, size_t size){
   BOOST_CHECK_EQUAL(size, 4);
   Bus1::bus.readBusFrame(data);
 }

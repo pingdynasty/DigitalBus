@@ -134,9 +134,11 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
     break;
   case OWL_COMMAND_RESET:
     std::cout << "rst [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
-    if(nuid != NO_UID) // propagate
+    if(id == 0){
+      if(nuid != NO_UID) // propagate
       sendFrame(frame);
-    reset();
+      reset();
+    }
     break;
   default:
     rxError("Invalid message");
