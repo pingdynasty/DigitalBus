@@ -234,6 +234,7 @@ public:
       len = read(m_fd, buf, bufferSize);
       fifo.push(buf, len);
       while(fifo.getAvailable() >= 4){
+	std::cout << ".";
 	fifo.pop(buf, 4);
 	bus.readBusFrame(buf);
       }

@@ -1,6 +1,7 @@
 #include "DigitalBusReader.h"
 #include "bus.h"
 #include <string.h>
+#include <iostream>
 
 void DigitalBusReader::appendFrame(uint8_t* frame){
 
@@ -12,20 +13,24 @@ void DigitalBusReader::readBusFrame(uint8_t* frame){
   uint8_t id = frame[0]&0x0f;
   switch(frame[0]&0xf0){
   case 0:
+    std::cout << "midi [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     // if(nuid == NO_UID)
     //   return rxError("Out of sequence message");
     readMidiFrame(frame);
     sendFrame(frame); // warning: circular propagation!
     break;
   case OWL_COMMAND_DISCOVER:
+    std::cout << "disco [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     handleDiscover(id, (frame[1] << 16) | (frame[2]<<8) | frame[3]);
     break;
   case OWL_COMMAND_ENUM:
+    std::cout << "enum [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(peers == 0)
       return rxError("Out of sequence message");
     handleEnum(id, frame[1], frame[2], frame[3]);
     break;
   case OWL_COMMAND_IDENT:
+    std::cout << "ident [" << (int)uid << "][" << (int)nuid << "][" << (int)peers << "]" << std::endl;
     if(nuid == NO_UID)
       return rxError("Out of sequence message");
     if(id != uid){
