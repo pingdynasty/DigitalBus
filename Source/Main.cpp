@@ -9,12 +9,12 @@
 #include <iostream>
 #include <sys/ioctl.h>
 #include <errno.h>
-#include "MidiReader.h"
+#include "DigitalBusReader.h"
 #include "MidiStatus.h"
 
 #define DEFAULT_SPEED              115200
 #define DEFAULT_PORT               "/dev/ttyS1"
-#define DEFAULT_BUFFER_SIZE        4096
+#define DEFAULT_BUFFER_SIZE        512
 
 /**
  * to test with virtual serial port / pty:
@@ -22,21 +22,36 @@
  * DigitalBus -p /dev/ttyp0
  */
 
-// class MidiReader {
-// private:
-// public:
-//   int readMidiMessage(juce::MidiMessage& msg, unsigned char lastbyte, unsigned char* buf, ssize_t len){
-//     int used;
-//     if(buf[0] == 0xf7){
-//       // sysex
-//     }else{
-//       msg = juce::MidiMessage(buf, len, used, lastbyte);
-//     }
-//     return used;
-//   }
-//   int push(unsigned char data){
-//   }
-// };
+extern "C" void serial_write(uint8_t* data, size_t len);
+
+class MyFifo {
+public:
+  MyFifo()  : abstractFifo (1024){}
+  void push(const uint8_t* someData, int numItems){
+    int start1, size1, start2, size2;
+    abstractFifo.prepareToWrite(numItems, start1, size1, start2, size2);
+    if(size1 > 0)
+      memcpy(myBuffer + start1, someData, size1);
+    if(size2 > 0)
+      memcpy(myBuffer + start2, someData + size1, size2);
+    abstractFifo.finishedWrite(size1 + size2);
+  }
+  void pop(uint8_t* someData, int numItems){
+    int start1, size1, start2, size2;
+    abstractFifo.prepareToRead(numItems, start1, size1, start2, size2);
+    if(size1 > 0)
+      memcpy(someData, myBuffer + start1, size1);
+    if(size2 > 0)
+      memcpy(someData + size1, myBuffer + start2, size2);
+    abstractFifo.finishedRead(size1 + size2);
+  }
+  int getAvailable(){
+    return abstractFifo.getNumReady();
+  }
+private:
+    AbstractFifo abstractFifo;
+    uint8_t myBuffer[1024];
+};
 
 class DigitalBus : public juce::MidiInputCallback {
 private:
@@ -49,7 +64,8 @@ private:
   MidiOutput* m_midiout;
   MidiInput* m_midiin;
   int bufferSize;
-  MidiReader midireader;
+  DigitalBusReader bus;
+  MyFifo fifo;
 
   juce::String print(const MidiMessage& msg){
     juce::String str;
@@ -75,10 +91,15 @@ private:
   }
 
 public:
+
+  void writeSerial(uint8_t* data, size_t len){
+    if(write(m_fd, data, len) != len)
+      perror(m_port.toUTF8());
+  }
+
   void writeSerial(uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3){
     uint8_t msg[4] = {d0, d1, d2, d3};
-    if(write(m_fd, msg, 4) != 4)
-      perror(m_port.toUTF8());
+    writeSerial(msg, 4);
   }
 
   void writeSysex(uint8_t* data, uint16_t size){
@@ -128,7 +149,7 @@ public:
 //     }else{
       if(m_verbose)
 	std::cout << "tx " << m_port << ": " << print(msg) << std::endl;
-      uint8_t* data = msg.getRawData();
+      const uint8_t* data = msg.getRawData();
       switch(msg.getRawDataSize()){
       case 3:
 	writeSerial(data[0]>>8, data[0], data[1], data[2]);
@@ -150,7 +171,7 @@ public:
       std::cout << "tx " << m_port << ": " << " sysex " << size << " bytes" << std::endl;
     sysexbuf.write(data, size);
     if(data[size-1] == SYSEX_EOX){
-      writeSysex(sysexbuf.getData(), sysexbuf.getDataSize());
+      writeSysex((uint8_t*)sysexbuf.getData(), sysexbuf.getDataSize());
       sysexbuf.reset();
     }
   }
@@ -209,39 +230,39 @@ public:
     unsigned char buf[bufferSize];
     ssize_t len;
     int frompos;
-    MidiReaderStatus status;
     while(m_running) {
-      // todo:
-      // read x bytes
-      // process blocks of 4 (from head)
-      // keep back n bytes (n < 4)
-      // read some more
-      frompos = 0;
       len = read(m_fd, buf, bufferSize);
-	/* possibility that buffer contains:
-	   a) one incomplete message
-	   b) one complete message
-	   c) one complete message followed by one or more complete messages, 
-	      and/or possibly followed by an incomplete message
-	*/
-//       use: getc_unlocked() or getc() instead, or getw()?
-      while(frompos < len){
-	status = midireader.read(buf[frompos++]);
-	if(status == READY){
-	  msg = midireader.getMessage();
-	  if(m_midiout != NULL)
-	    m_midiout->sendMessageNow(msg);
-	  if(m_verbose)
-	    std::cout << "rx " << m_port << ": " << print(msg) << std::endl;
-	}else if(status == ERROR){
-	  if(m_verbose){
-	    int len;
-	    unsigned char* buf = midireader.getBuffer(len);
-	    std::cout << "rx error " << m_port << ": " << print(buf, len) << std::endl;
-	  }
-	  midireader.clear();
-	}
+      fifo.push(buf, len);
+      while(fifo.getAvailable() >= 4){
+	fifo.pop(buf, 4);
+	bus.readBusFrame(buf);
       }
+//       frompos = 0;
+//       len = read(m_fd, buf, bufferSize);
+// 	/* possibility that buffer contains:
+// 	   a) one incomplete message
+// 	   b) one complete message
+// 	   c) one complete message followed by one or more complete messages, 
+// 	      and/or possibly followed by an incomplete message
+// 	*/
+// //       use: getc_unlocked() or getc() instead, or getw()?
+//       while(frompos < len){
+// 	status = midireader.read(buf[frompos++]);
+// 	if(status == READY){
+// 	  msg = midireader.getMessage();
+// 	  if(m_midiout != NULL)
+// 	    m_midiout->sendMessageNow(msg);
+// 	  if(m_verbose)
+// 	    std::cout << "rx " << m_port << ": " << print(msg) << std::endl;
+// 	}else if(status == ERROR){
+// 	  if(m_verbose){
+// 	    int len;
+// 	    unsigned char* buf = midireader.getBuffer(len);
+// 	    std::cout << "rx error " << m_port << ": " << print(buf, len) << std::endl;
+// 	  }
+// 	  midireader.clear();
+// 	}
+//       }
     }
     return 0;
   }
@@ -343,8 +364,9 @@ public:
   DigitalBus() :
     m_port(DEFAULT_PORT),
     m_speed(DEFAULT_SPEED), 
-    bufferSize(DEFAULT_BUFFER_SIZE),
-    midireader(DEFAULT_BUFFER_SIZE) {
+    bufferSize(DEFAULT_BUFFER_SIZE)
+    // midireader(DEFAULT_BUFFER_SIZE)
+  {
     m_midiin = NULL;
     m_midiout = NULL;
   }
@@ -377,3 +399,30 @@ int main(int argc, char* argv[]) {
   ret |= service.disconnect();
   return ret;
 }
+
+void serial_write(uint8_t* data, size_t len){
+  service.writeSerial(data, len);
+}
+
+
+void bus_setup(){}
+int bus_status(){
+  return 1;
+}
+uint8_t* bus_deviceid(){
+  return (uint8_t*)"123443211234";
+}
+/* outgoing: send message over digital bus */
+void bus_tx_parameter(uint8_t pid, int16_t value){}
+/* incoming: callback when message received on digital bus */
+void bus_rx_parameter(uint8_t pid, int16_t value){}
+void bus_tx_button(uint8_t bid, int16_t value){}
+void bus_rx_button(uint8_t bid, int16_t value){}
+void bus_tx_command(uint8_t cmd, int16_t data){}
+void bus_rx_command(uint8_t cmd, int16_t data){}
+void bus_tx_message(const char* msg){}
+void bus_rx_message(const char* msg){}
+void bus_tx_data(const uint8_t* data, uint16_t size){}
+void bus_rx_data(const uint8_t* data, uint16_t size){}
+void bus_tx_error(const char* reason){}
+void bus_rx_error(const char* reason){}

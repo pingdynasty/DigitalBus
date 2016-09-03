@@ -5,6 +5,8 @@ ifndef CONFIG
   CONFIG=Debug
 endif
 
+CFLAGS ?= -std=gnu++11
+
 ifeq ($(CONFIG),Debug)
   BINDIR := build
   LIBDIR := build
@@ -21,7 +23,7 @@ ifeq ($(CONFIG),Debug)
   LDFLAGS += $(TARGET_ARCH) -L$(BINDIR) -L$(LIBDIR) -lX11 -lasound -ldl -lpthread -lrt 
   LDDEPS :=
   RESFLAGS :=  -D "LINUX=1" -D "DEBUG=1" -D "_DEBUG=1" -D "JUCER_LINUX_MAKE_7346DA2A=1" -I /usr/include -I /usr/include/freetype2 -I ../../JuceLibraryCode
-  TARGET := MidiSerial
+  TARGET := DigitalBus
   BLDCMD = $(CXX) -o $(OUTDIR)/$(TARGET) $(OBJECTS) $(LDFLAGS) $(RESOURCES) $(TARGET_ARCH)
 endif
 
@@ -41,7 +43,7 @@ ifeq ($(CONFIG),Release)
   LDFLAGS += $(TARGET_ARCH) -L$(BINDIR) -L$(LIBDIR) -fvisibility=hidden -lX11 -lasound -ldl -lpthread -lrt 
   LDDEPS :=
   RESFLAGS :=  -D "LINUX=1" -D "NDEBUG=1" -D "JUCER_LINUX_MAKE_7346DA2A=1" -I /usr/include -I /usr/include/freetype2 -I ../../JuceLibraryCode
-  TARGET := MidiSerial
+  TARGET := DigitalBus
   BLDCMD = $(CXX) -o $(OUTDIR)/$(TARGET) $(OBJECTS) $(LDFLAGS) $(RESOURCES) $(TARGET_ARCH)
 endif
 
@@ -50,6 +52,10 @@ DEPFLAGS := $(if $(word 2, $(TARGET_ARCH)), , -MMD)
 
 OBJECTS := \
   $(OBJDIR)/Main_90ebc5c2.o \
+  $(OBJDIR)/DigitalBusReader_90ebc5c2.o \
+  $(OBJDIR)/DigitalBusHandler_90ebc5c2.o \
+  $(OBJDIR)/MidiReader_90ebc5c2.o \
+  $(OBJDIR)/MidiHandler_90ebc5c2.o \
   $(OBJDIR)/juce_audio_basics_2442e4ea.o \
   $(OBJDIR)/juce_audio_devices_a4c8a728.o \
   $(OBJDIR)/juce_audio_formats_d349f0c8.o \
@@ -59,25 +65,45 @@ OBJECTS := \
 .PHONY: clean
 
 $(OUTDIR)/$(TARGET): $(OBJECTS) $(LDDEPS) $(RESOURCES)
-	@echo Linking MidiSerial
+	@echo Linking DigitalBus
 	-@mkdir -p $(BINDIR)
 	-@mkdir -p $(LIBDIR)
 	-@mkdir -p $(OUTDIR)
 	@$(BLDCMD)
 
 clean:
-	@echo Cleaning MidiSerial
+	@echo Cleaning DigitalBus
 	-@rm -f $(OUTDIR)/$(TARGET)
 	-@rm -rf $(OBJDIR)/*
 	-@rm -rf $(OBJDIR)
 
 strip:
-	@echo Stripping MidiSerial
+	@echo Stripping DigitalBus
 	-@strip --strip-unneeded $(OUTDIR)/$(TARGET)
 
 $(OBJDIR)/Main_90ebc5c2.o: ../../Source/Main.cpp
 	-@mkdir -p $(OBJDIR)
 	@echo "Compiling Main.cpp"
+	@$(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+
+$(OBJDIR)/DigitalBusReader_90ebc5c2.o: ../../Source/DigitalBusReader.cpp
+	-@mkdir -p $(OBJDIR)
+	@echo "Compiling DigitalBusReader.cpp"
+	@$(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+
+$(OBJDIR)/DigitalBusHandler_90ebc5c2.o: ../../Source/DigitalBusHandler.cpp
+	-@mkdir -p $(OBJDIR)
+	@echo "Compiling DigitalBusHandler.cpp"
+	@$(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+
+$(OBJDIR)/MidiReader_90ebc5c2.o: ../../Source/MidiReader.cpp
+	-@mkdir -p $(OBJDIR)
+	@echo "Compiling MidiReader.cpp"
+	@$(CXX) $(CXXFLAGS) -o "$@" -c "$<"
+
+$(OBJDIR)/MidiHandler_90ebc5c2.o: ../../Source/MidiHandler.cpp
+	-@mkdir -p $(OBJDIR)
+	@echo "Compiling MidiHandler.cpp"
 	@$(CXX) $(CXXFLAGS) -o "$@" -c "$<"
 
 $(OBJDIR)/juce_audio_basics_2442e4ea.o: ../../JuceLibraryCode/modules/juce_audio_basics/juce_audio_basics.cpp
