@@ -412,17 +412,44 @@ int bus_status(){
 uint8_t* bus_deviceid(){
   return (uint8_t*)"123443211234";
 }
+
 /* outgoing: send message over digital bus */
-void bus_tx_parameter(uint8_t pid, int16_t value){}
-/* incoming: callback when message received on digital bus */
-void bus_rx_parameter(uint8_t pid, int16_t value){}
-void bus_tx_button(uint8_t bid, int16_t value){}
-void bus_rx_button(uint8_t bid, int16_t value){}
+void bus_tx_parameter(uint8_t pid, int16_t value){
+  // bus.sendParameterChange(pid, value);
+}
+void bus_tx_button(uint8_t bid, int16_t value){
+  // bus.sendButtonChange(bid, value);
+}
 void bus_tx_command(uint8_t cmd, int16_t data){}
-void bus_rx_command(uint8_t cmd, int16_t data){}
 void bus_tx_message(const char* msg){}
-void bus_rx_message(const char* msg){}
 void bus_tx_data(const uint8_t* data, uint16_t size){}
-void bus_rx_data(const uint8_t* data, uint16_t size){}
-void bus_tx_error(const char* reason){}
-void bus_rx_error(const char* reason){}
+
+/* incoming: callback when message received on digital bus */
+void bus_rx_parameter(uint8_t pid, int16_t value){
+  std::cout << "bus rx parameter [" << (int)pid << "][" << value << "]" << std::endl;
+}
+
+void bus_rx_button(uint8_t bid, int16_t value){
+  std::cout << "bus rx button [" << bid << "][" << value << "]" << std::endl;
+}
+
+void bus_rx_command(uint8_t cmd, int16_t data){
+  std::cout << "bus rx command [" << (int)cmd << "][" << (int)data << "]" << std::endl;
+}
+
+void bus_rx_message(const char* msg){
+  std::cout << "bus rx message [" << msg << "]" << std::endl;
+}
+
+void bus_rx_data(const uint8_t* ptr, uint16_t size){
+  std::cout << "bus rx data [" << size << "]" << std::endl;
+}
+
+/* error: callback on error condition */
+void bus_tx_error(const char* reason){
+  std::cout << "bus tx error [" << reason << "]" << std::endl;
+}
+
+void bus_rx_error(const char* reason){
+  std::cout << "bus rx error [" << reason << "]" << std::endl;
+}
