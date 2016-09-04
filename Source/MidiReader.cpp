@@ -20,7 +20,7 @@ void MidiReader::readMidiFrame(uint8_t* frame){
   case USB_COMMAND_SYSEX_EOX1:
     if(pos < size){
       buffer[pos++] = frame[1];
-      handleSysEx(buffer+1, pos-2);
+      handleSysEx(buffer, pos);
     }else{
       bus_rx_error("Sysex buffer overflow");
     }
@@ -30,7 +30,7 @@ void MidiReader::readMidiFrame(uint8_t* frame){
     if(pos+2 <= size){
       buffer[pos++] = frame[1];
       buffer[pos++] = frame[2];
-      handleSysEx(buffer+1, pos-2);
+      handleSysEx(buffer, pos);
     }else{
       bus_rx_error("Sysex buffer overflow");
     }
@@ -41,7 +41,7 @@ void MidiReader::readMidiFrame(uint8_t* frame){
       buffer[pos++] = frame[1];
       buffer[pos++] = frame[2];
       buffer[pos++] = frame[3];
-      handleSysEx(buffer+1, pos-2);
+      handleSysEx(buffer, pos);
     }else{
       bus_rx_error("Sysex buffer overflow");
     }

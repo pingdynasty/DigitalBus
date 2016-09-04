@@ -49,12 +49,15 @@ public:
   int getAvailable(){
     return abstractFifo.getNumReady();
   }
+  void reset(){
+    abstractFifo.reset();
+  }
 private:
     AbstractFifo abstractFifo;
     uint8_t myBuffer[1024];
 };
 
-class DigitalBus : public juce::MidiInputCallback {
+class DigitalBusService : public juce::MidiInputCallback {
 private:
   int m_fd;
   struct termios m_oldtio;
@@ -92,6 +95,11 @@ private:
   }
 
 public:
+  void reset(){
+    fifo.reset();
+    bus.reset();
+    bus.sendReset();
+  }
 
   void writeSerial(uint8_t* data, size_t len){
     if(m_verbose)
@@ -121,8 +129,7 @@ public:
       packet[3] = *src++;
       if(packet[3] == SYSEX_EOX)
 	packet[0] = USB_COMMAND_SYSEX_EOX3;
-      if(write(m_fd, packet, 4) != 4)
-	perror(m_port.toUTF8());
+      writeSerial(packet, 4);
     }
     count = size % 3;
     switch(count){
@@ -141,8 +148,7 @@ public:
       packet[3] = 0;
       break;
     }
-    if(write(m_fd, packet, 4) != 4)
-      perror(m_port.toUTF8());
+    writeSerial(packet, 4);
   }
 
   void handleIncomingMidiMessage(MidiInput *source,
@@ -150,8 +156,11 @@ public:
 //     if(msg.isSysEx()){
 //       handlePartialSysexMessage(source, msg.getRawData(), msg.getRawDataSize(), msg.getTimeStamp());
 //     }else{
-      if(m_verbose)
-	std::cout << "rx midi: " << print(msg) << std::endl;
+    if(m_verbose)
+      std::cout << "rx midi: " << print(msg) << std::endl;
+    if(msg.isSysEx()){
+      writeSysex((uint8_t*)msg.getRawData(), msg.getRawDataSize());
+    }else{
       const uint8_t* data = msg.getRawData();
       switch(msg.getRawDataSize()){
       case 3:
@@ -163,21 +172,24 @@ public:
       case 1:
 	writeSerial(data[0]>>4, data[0], 0, 0);
 	break;
+      default:
+	std::cout << "YO MIDI " << msg.getRawDataSize() << std::endl;
+	break;
       }
-//     }
-  }
-
-  MemoryOutputStream sysexbuf;  
-  void handlePartialSysexMessage(MidiInput* source, const uint8* data,
-				 int size, double timestamp){
-    if(m_verbose)
-      std::cout << "rx midi: " << " sysex " << size << " bytes" << std::endl;
-    sysexbuf.write(data, size);
-    if(data[size-1] == SYSEX_EOX){
-      writeSysex((uint8_t*)sysexbuf.getData(), sysexbuf.getDataSize());
-      sysexbuf.reset();
     }
   }
+
+  // MemoryOutputStream sysexbuf;  
+  // void handlePartialSysexMessage(MidiInput* source, const uint8* data,
+  // 				 int size, double timestamp){
+  //   if(m_verbose)
+  //     std::cout << "rx midi: " << " sysex " << size << " bytes" << std::endl;
+  //   sysexbuf.write(data, size);
+  //   if(data[size-1] == SYSEX_EOX){
+  //     writeSysex((uint8_t*)sysexbuf.getData(), sysexbuf.getDataSize());
+  //     sysexbuf.reset();
+  //   }
+  // }
 
   void writeMidi(uint8_t* data, size_t len){
     MidiMessage msg(data, len);
@@ -374,7 +386,7 @@ public:
     return 0;
   }
 
-  DigitalBus() :
+  DigitalBusService() :
     m_port(DEFAULT_PORT),
     m_speed(DEFAULT_SPEED), 
     bufferSize(DEFAULT_BUFFER_SIZE)
@@ -384,7 +396,7 @@ public:
     m_midiout = NULL;
   }
   
-  ~DigitalBus(){
+  ~DigitalBusService(){
     if(m_running)
       stop();
     if(m_connected)
@@ -392,7 +404,7 @@ public:
   }
 };
 
-DigitalBus service;
+DigitalBusService service;
 
 void sigfun(int sig){
   service.stop();
@@ -469,4 +481,5 @@ void bus_tx_error(const char* reason){
 
 void bus_rx_error(const char* reason){
   std::cout << "bus rx error [" << reason << "]" << std::endl;
+  service.reset();
 }
