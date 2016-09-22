@@ -3,10 +3,6 @@
 #include <string.h>
 #include <iostream>
 
-void DigitalBusReader::appendFrame(uint8_t* frame){
-
-}
-
 // read a 4-byte data frame
 void DigitalBusReader::readBusFrame(uint8_t* frame){
   // OWL Digital Bus Protocol

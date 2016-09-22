@@ -44,3 +44,31 @@ void MidiHandler::handleSysEx(uint8_t* data, uint16_t size){
   midi_write(data, size);
 }
 
+void MidiHandler::handleSystemCommon(uint8_t cmd){
+  std::cout << "rx system common [0x" << std::hex << (int)cmd << "]" << std::endl;
+  midi_write(&cmd, 1);
+}
+
+void MidiHandler::handleSystemCommon(uint8_t cmd1, uint8_t cmd2){
+  std::cout << "rx system common [0x" << std::hex << (int)cmd1 << " 0x" << (int)cmd2 << "]" << std::endl;
+  uint8_t data[] = {cmd1, cmd2};
+  midi_write(data, sizeof(data));
+}
+
+void MidiHandler::handleSystemCommon(uint8_t cmd1, uint8_t cmd2, uint8_t cmd3){
+  std::cout << "rx system common [0x" << std::hex << (int)cmd1 << " 0x" << (int)cmd2 << " 0x" << (int)cmd3 << "]" << std::endl;
+  uint8_t data[] = {cmd1, cmd2, cmd3};
+  midi_write(data, sizeof(data));
+}
+
+void MidiHandler::handleChannelPressure(uint8_t status, uint8_t value){
+  std::cout << "rx cp [" << (int)status << "][" << (int)value << "]" << std::endl;
+  uint8_t data[] = {status, value};
+  midi_write(data, sizeof(data));
+}
+
+void MidiHandler::handlePolyKeyPressure(uint8_t status, uint8_t note, uint8_t value){
+  std::cout << "rx at [" << (int)status << "][" << (int)note << "][" << (int)value << "]" << std::endl;
+  uint8_t data[] = {status, note, value};
+  midi_write(data, sizeof(data));
+}

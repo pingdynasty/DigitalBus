@@ -1,5 +1,6 @@
 #include "MidiReader.h"
 #include "bus.h"
+#include <iostream>
 
 void MidiReader::readMidiFrame(uint8_t* frame){
   // apparently no running status in USB MIDI frames
@@ -7,6 +8,7 @@ void MidiReader::readMidiFrame(uint8_t* frame){
   case USB_COMMAND_MISC:
   case USB_COMMAND_CABLE_EVENT:
     // ignore
+    std::cout << "rx misc" << std::endl;
     break;
   case USB_COMMAND_SINGLE_BYTE:
     handleSystemCommon(frame[1]);

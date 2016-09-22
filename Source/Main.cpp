@@ -11,10 +11,13 @@
 #include <errno.h>
 #include "DigitalBusReader.h"
 #include "MidiStatus.h"
+#include "SerialBuffer.hpp"
 
 #define DEFAULT_SPEED              115200
 #define DEFAULT_PORT               "/dev/ttyS1"
 #define DEFAULT_BUFFER_SIZE        512
+
+#define DIGITAL_BUS_RX_BUFFER_SIZE 128
 
 /**
  * to test with virtual serial port / pty:
@@ -24,38 +27,6 @@
 
 void serial_write(uint8_t* data, size_t len);
 void midi_write(uint8_t* data, size_t len);
-
-class MyFifo {
-public:
-  MyFifo()  : abstractFifo (1024){}
-  void push(const uint8_t* someData, int numItems){
-    int start1, size1, start2, size2;
-    abstractFifo.prepareToWrite(numItems, start1, size1, start2, size2);
-    if(size1 > 0)
-      memcpy(myBuffer + start1, someData, size1);
-    if(size2 > 0)
-      memcpy(myBuffer + start2, someData + size1, size2);
-    abstractFifo.finishedWrite(size1 + size2);
-  }
-  void pop(uint8_t* someData, int numItems){
-    int start1, size1, start2, size2;
-    abstractFifo.prepareToRead(numItems, start1, size1, start2, size2);
-    if(size1 > 0)
-      memcpy(someData, myBuffer + start1, size1);
-    if(size2 > 0)
-      memcpy(someData + size1, myBuffer + start2, size2);
-    abstractFifo.finishedRead(size1 + size2);
-  }
-  int getAvailable(){
-    return abstractFifo.getNumReady();
-  }
-  void reset(){
-    abstractFifo.reset();
-  }
-private:
-    AbstractFifo abstractFifo;
-    uint8_t myBuffer[1024];
-};
 
 class DigitalBusService : public juce::MidiInputCallback {
 private:
@@ -69,7 +40,7 @@ private:
   MidiInput* m_midiin;
   int bufferSize;
   DigitalBusReader bus;
-  MyFifo fifo;
+  SerialBuffer<DIGITAL_BUS_RX_BUFFER_SIZE> rxbuf;
 
   juce::String print(const MidiMessage& msg){
     juce::String str;
@@ -96,7 +67,7 @@ private:
 
 public:
   void reset(){
-    fifo.reset();
+    rxbuf.reset();
     bus.reset();
     bus.sendReset();
   }
@@ -248,46 +219,47 @@ public:
     return 0;
   }
 
+  uint32_t getSysTicks(){
+    return Time::currentTimeMillis();
+  }
+
+  uint32_t BUS_IDLE_INTERVAL = 2453;
+
+  int bus_status(){
+    static uint32_t lastpolled = 0;
+    if(getSysTicks() > lastpolled + BUS_IDLE_INTERVAL){
+      bus.connected();
+      lastpolled = getSysTicks();
+    }
+    return bus.getStatus();
+  }
+
   int run(){
     juce::MidiMessage msg;
-    unsigned char buf[bufferSize];
     ssize_t len;
     int frompos;
     bus.sendReset();
     while(m_running) {
-      len = read(m_fd, buf, bufferSize);
-      fifo.push(buf, len);
-      while(fifo.getAvailable() >= 4){
-	fifo.pop(buf, 4);
+      uint8_t buf[4];
+      len = read(m_fd, buf, 4);
+      // bus.read(buf, len);
+      rxbuf.push(buf, len);
+      while(rxbuf.available() >= 4){
+	rxbuf.pull(buf, 4);
 	std::cout << "> [0x"<< std::hex << (int)buf[0] << " 0x" << (int)buf[1] << " 0x" << (int)buf[2] << " 0x" << (int)buf[3] << "]" << std::endl;
 	bus.readBusFrame(buf);
       }
-//       frompos = 0;
-//       len = read(m_fd, buf, bufferSize);
-// 	/* possibility that buffer contains:
-// 	   a) one incomplete message
-// 	   b) one complete message
-// 	   c) one complete message followed by one or more complete messages, 
-// 	      and/or possibly followed by an incomplete message
-// 	*/
-// //       use: getc_unlocked() or getc() instead, or getw()?
-//       while(frompos < len){
-// 	status = midireader.read(buf[frompos++]);
-// 	if(status == READY){
-// 	  msg = midireader.getMessage();
-// 	  if(m_midiout != NULL)
-// 	    m_midiout->sendMessageNow(msg);
-// 	  if(m_verbose)
-// 	    std::cout << "rx " << m_port << ": " << print(msg) << std::endl;
-// 	}else if(status == ERROR){
-// 	  if(m_verbose){
-// 	    int len;
-// 	    unsigned char* buf = midireader.getBuffer(len);
-// 	    std::cout << "rx error " << m_port << ": " << print(buf, len) << std::endl;
-// 	  }
-// 	  midireader.clear();
-// 	}
-//       }
+
+      bus_status();
+      // uint8_t* buf = rxbuf.getWriteHead();
+      // len = read(m_fd, buf, rxbuf.getWriteCapacity());
+      // rxbuf.incrementWriteHead(len);
+      // while(rxbuf.available() >= 4){
+      // 	buf = rxbuf.getReadHead();
+      // 	std::cout << "> [0x"<< std::hex << (int)buf[0] << " 0x" << (int)buf[1] << " 0x" << (int)buf[2] << " 0x" << (int)buf[3] << "]" << std::endl;
+      // 	bus.readBusFrame(buf);
+      // 	rxbuf.incrementReadHead(4);
+      // }
     }
     return 0;
   }
@@ -368,6 +340,7 @@ public:
         return -1;
       }
     }
+    disconnect();
     return 0;
   }
 
@@ -408,12 +381,13 @@ DigitalBusService service;
 
 void sigfun(int sig){
   service.stop();
-  (void)signal(SIGINT, SIG_DFL);
+  (void)signal(sig, SIG_DFL);
 }
 
 int main(int argc, char* argv[]) {
 //   const ScopedJuceInitialiser_NonGUI juceSystemInitialiser;
   (void)signal(SIGINT, sigfun);
+  // (void)signal(SIGQUIT, sigfun);
   int ret = service.configure(argc, argv);
   if(!ret)
     ret = service.connect();
