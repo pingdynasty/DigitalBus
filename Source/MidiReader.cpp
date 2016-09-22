@@ -19,6 +19,17 @@ void MidiReader::readMidiFrame(uint8_t* frame){
   case USB_COMMAND_3BYTE_SYSTEM_COMMON:
     handleSystemCommon(frame[1], frame[2], frame[3]);
     break;
+  case USB_COMMAND_SYSEX:
+    if(pos+3 > size){
+      bus_rx_error("SysEx buffer overflow");
+    }else{
+      buffer[pos++] = frame[1];
+      buffer[pos++] = frame[2];
+      buffer[pos++] = frame[3];
+    }
+    if(buffer[0] != SYSEX)
+      bus_rx_error("Invalid SysEx");
+    break;
   case USB_COMMAND_SYSEX_EOX1:
     if(pos < 3 || buffer[0] != SYSEX || frame[1] != SYSEX_EOX){
       bus_rx_error("Invalid SysEx");
@@ -54,15 +65,6 @@ void MidiReader::readMidiFrame(uint8_t* frame){
       handleSysEx(buffer, pos);
     }
     pos = 0;
-    break;
-  case USB_COMMAND_SYSEX:
-    if(pos+3 > size){
-      bus_rx_error("SysEx buffer overflow");
-    }else{
-      buffer[pos++] = frame[1];
-      buffer[pos++] = frame[2];
-      buffer[pos++] = frame[3];
-    }
     break;
   case USB_COMMAND_PROGRAM_CHANGE:
     handleProgramChange(frame[1], frame[2]);

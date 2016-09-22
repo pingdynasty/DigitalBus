@@ -35,7 +35,8 @@ private:
   juce::String m_port;
   int m_speed;
   bool m_verbose;
-  bool m_connected, m_running;
+  bool m_connected;
+  volatile bool m_running;
   MidiOutput* m_midiout;
   MidiInput* m_midiin;
   int bufferSize;
@@ -207,8 +208,6 @@ public:
     if(m_verbose)
       std::cout << "stopping" << std::endl;
     m_running = false;
-    if(m_midiin != NULL)
-      m_midiin->stop();
     return 0;
   }
 
@@ -242,7 +241,8 @@ public:
     while(m_running) {
       uint8_t buf[4];
       len = read(m_fd, buf, 4);
-      // bus.read(buf, len);
+      if(len < 0)
+	return -1;
       rxbuf.push(buf, len);
       while(rxbuf.available() >= 4){
 	rxbuf.pull(buf, 4);
@@ -265,6 +265,32 @@ public:
   }
 
   int openSerial(const char* serialport, int baud) {
+    switch(baud){
+    case 9600:
+      baud = B9600;
+      break;
+    case 19200:
+      baud = B19200;
+      break;
+    case 38400:
+      baud = B38400;
+      break;
+    case 57600:
+      baud = B57600;
+      break;
+    case 115200:
+      baud = B115200;
+      break;
+    case 230400:
+      baud = B230400;
+      break;
+    case 460800:
+      baud = B460800;
+      break;
+    case 921600:
+      baud = B921600;
+      break;
+    }
     struct termios tio;
     int fd;
     fd = open(serialport, O_RDWR | O_NOCTTY | O_NDELAY);
@@ -280,22 +306,28 @@ public:
     fcntl(fd, F_SETFL, 0);
 
     /* Configure port */
-    tio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
+    tio.c_cflag = baud | CS8 | CLOCAL | CREAD;
     tio.c_iflag = IGNPAR;
     tio.c_oflag = 0;
     tio.c_lflag = 0;
     tio.c_cc[VMIN] = 1;
     tio.c_cc[VTIME] = 0;
-    cfsetispeed(&tio, baud);
-    cfsetospeed(&tio, baud);
-    //     cfmakeraw(&tio);
-	
-    tcflush(fd, TCIFLUSH);
-    if(tcsetattr(fd, TCSANOW, &tio) < 0){
-      perror(serialport);
+    if(cfsetispeed(&tio, baud) < 0)
       return -1;
-    }
-
+    if(cfsetospeed(&tio, baud) < 0)
+      return -1;
+    // int actual = cfsetispeed(&tio, baud);
+    // if(actual != baud)
+    //   std::cerr << "Actual input speed: " << actual << " baud." << std::endl;      
+    // actual = cfsetospeed(&tio, baud);
+    // if(actual != baud)
+    //   std::cerr << "Actual output speed: " << actual << " baud." << std::endl;
+    // //     cfmakeraw(&tio);
+    // if(actual < 0)
+    //   return -1;
+    tcflush(fd, TCIFLUSH);
+    if(tcsetattr(fd, TCSANOW, &tio) < 0)
+      return -1;
     return fd;
   }
 
@@ -340,7 +372,6 @@ public:
         return -1;
       }
     }
-    disconnect();
     return 0;
   }
 
@@ -352,10 +383,15 @@ public:
       close(m_fd);
       m_connected = false;
     }
-    if(m_midiout != NULL)
+    if(m_midiout != NULL){
       delete m_midiout;
-    if(m_midiin != NULL)
+      m_midiout = NULL;
+    }
+    if(m_midiin != NULL){
+      m_midiin->stop();
       delete m_midiin;
+      m_midiin = NULL;
+    }
     return 0;
   }
 
@@ -370,24 +406,25 @@ public:
   }
   
   ~DigitalBusService(){
-    if(m_running)
-      stop();
     if(m_connected)
       disconnect();
+    if(m_running)
+      stop();
   }
 };
 
 DigitalBusService service;
 
 void sigfun(int sig){
-  service.stop();
   (void)signal(sig, SIG_DFL);
+  service.disconnect();
+  service.stop();
 }
 
 int main(int argc, char* argv[]) {
 //   const ScopedJuceInitialiser_NonGUI juceSystemInitialiser;
   (void)signal(SIGINT, sigfun);
-  // (void)signal(SIGQUIT, sigfun);
+  (void)signal(SIGQUIT, sigfun);
   int ret = service.configure(argc, argv);
   if(!ret)
     ret = service.connect();
