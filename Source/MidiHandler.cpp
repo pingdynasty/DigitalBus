@@ -44,8 +44,8 @@ void MidiHandler::handleSysEx(uint8_t* data, uint16_t size){
   midi_write(data, size);
 }
 
-void MidiHandler::handleSystemCommon(uint8_t cmd){
-  std::cout << "rx system common [0x" << std::hex << (int)cmd << "]" << std::endl;
+void MidiHandler::handleSystemRealTime(uint8_t cmd){
+  std::cout << "rx system realtime [0x" << std::hex << (int)cmd << "]" << std::endl;
   midi_write(&cmd, 1);
 }
 

@@ -22,7 +22,6 @@ public:
       writepos += len;
     }
   }
-
   void pull(uint8_t* data, uint16_t len){
     uint8_t* src = getReadHead();
     uint16_t rem = size-readpos;
@@ -41,7 +40,6 @@ public:
     if(writepos >= size)
       writepos = 0;
   }
-
   uint8_t pull(){
     uint8_t c = buffer[readpos++];
     if(readpos >= size)

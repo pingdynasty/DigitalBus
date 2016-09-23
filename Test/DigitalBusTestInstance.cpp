@@ -30,11 +30,6 @@ void bus_tx_parameter(uint8_t pid, int16_t value){
   bus.sendParameterChange(pid, value);
 }
 
-void bus_tx_button(uint8_t bid, int16_t value){
-  debug << "tx button [" << bid << "][" << value << "]" ;
-  bus.sendButtonChange(bid, value);
-}
-
 void bus_tx_command(uint8_t cmd, int16_t data){
   debug << "tx command [" << cmd << "][" << data << "]" ;
   bus.sendCommand(cmd, data);
@@ -57,4 +52,8 @@ void bus_tx_error(const char* reason){
 void bus_rx_error(const char* reason){
   debug << "Digital bus receive error: " << reason << ".";
   bus.reset();
+}
+
+void midi_write(uint8_t* data, unsigned int len){
+  // debug << "MIDI write: " << len << " bytes.";
 }

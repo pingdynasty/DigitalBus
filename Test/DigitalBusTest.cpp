@@ -40,7 +40,6 @@ void Debug::print(int arg){
 
 Debug debug;
 int16_t parameters[256] = { 0 };
-uint16_t buttons[256] = { 0 };
 uint16_t commands[256] = { 0 };
 char* message = NULL;
 uint8_t *data = NULL;
@@ -65,7 +64,6 @@ void bus_setup(){
   Bus3::bus.reset();
   for(int i=0; i<256; ++i){
     parameters[i] = 0;
-    buttons[i] = 0;
     commands[i] = 0;
   }
   message = NULL;
@@ -97,9 +95,6 @@ void Bus3::serial_write(uint8_t* data, size_t size){
 
 void bus_rx_parameter(uint8_t pid, int16_t value){
   parameters[pid] = value;
-}
-void bus_rx_button(uint8_t bid, int16_t value){
-  buttons[bid] = value;
 }
 void bus_rx_command(uint8_t cmd, int16_t data){
   commands[cmd] = data;
@@ -135,8 +130,6 @@ BOOST_AUTO_TEST_CASE(testStatus){
   bus_setup();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 0);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 0);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 0);
   Bus1::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 1);
@@ -144,10 +137,6 @@ BOOST_AUTO_TEST_CASE(testStatus){
   Bus1::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), 1);
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), 0);
   bus_setup();
   Bus2::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
@@ -161,10 +150,6 @@ BOOST_AUTO_TEST_CASE(testStatus){
   Bus1::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), 1);
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), 0);
 }
 
 BOOST_AUTO_TEST_CASE(testOneSidedStatus){
@@ -178,10 +163,6 @@ BOOST_AUTO_TEST_CASE(testOneSidedStatus){
     Bus1::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), 1);
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), 0);
   // reset and test other side
   bus_setup();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 0);
@@ -190,14 +171,9 @@ BOOST_AUTO_TEST_CASE(testOneSidedStatus){
     Bus2::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 1);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
   // Bus2 is waiting for uid 0 to start enum
   // by design, uid 0 must initiate enumeration
   Bus1::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), Bus2::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), Bus1::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
 }
 
 BOOST_AUTO_TEST_CASE(testParameters){
@@ -210,19 +186,6 @@ BOOST_AUTO_TEST_CASE(testParameters){
   BOOST_CHECK_EQUAL(parameters[0x10], 0x1234);
   Bus2::bus.sendParameterChange(0x20, 0x1324);
   BOOST_CHECK_EQUAL(parameters[0x20], 0x1324);
-}
-
-BOOST_AUTO_TEST_CASE(testButtons){
-  bus_setup();
-  Bus1::bus_status();
-  Bus2::bus_status();
-  Bus1::bus_status();
-  BOOST_CHECK_EQUAL(buttons[0x12], 0);
-  BOOST_CHECK_EQUAL(buttons[0x34], 0);
-  Bus1::bus.sendButtonChange(0x12, 0x12);
-  BOOST_CHECK_EQUAL(buttons[0x12], 0x12);
-  Bus2::bus.sendButtonChange(0x34, 0x3124);
-  BOOST_CHECK_EQUAL(buttons[0x34], 0x3124);
 }
 
 BOOST_AUTO_TEST_CASE(testCommands){
@@ -287,8 +250,6 @@ BOOST_AUTO_TEST_CASE(testTxError){
   bus_setup();
   Bus2::bus_status();
   Bus1::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), Bus2::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), Bus1::bus.getNuid());
   uint8_t buf1[4] = { 0xff, 0xff, 0xff, 0xff };  
   Bus1::serial_write(buf1, 4);
   Bus2::bus_status();
@@ -309,10 +270,6 @@ BOOST_AUTO_TEST_CASE(testResetRecovery){
   Bus2::bus_status();
   Bus1::bus_status();
   Bus2::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), Bus2::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), Bus1::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
   Bus1::bus.sendParameterChange(0x15, 0x214);
   BOOST_CHECK_EQUAL(parameters[0x15], 0x214);
   Bus1::bus.reset();
@@ -320,10 +277,6 @@ BOOST_AUTO_TEST_CASE(testResetRecovery){
   Bus2::bus_status();
   Bus1::bus_status();
   Bus2::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), Bus2::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), Bus1::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
   Bus1::bus.sendParameterChange(0x15, 0x1429);
   BOOST_CHECK_EQUAL(parameters[0x15], 0x1429);
   Bus2::bus.reset();
@@ -331,10 +284,6 @@ BOOST_AUTO_TEST_CASE(testResetRecovery){
   Bus1::bus_status();
   Bus2::bus_status();
   Bus1::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 1);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), Bus2::bus.getNuid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), Bus1::bus.getNuid());
   Bus1::bus.sendParameterChange(0x51, 0x1492);
   BOOST_CHECK_EQUAL(parameters[0x51], 0x1492);
 }
@@ -345,19 +294,12 @@ BOOST_AUTO_TEST_CASE(test3setup){
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 0);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 0);
   BOOST_CHECK_EQUAL(Bus3::bus.getPeers(), 0);
-  BOOST_CHECK_EQUAL(Bus1::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus2::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus3::bus.getUid(), 0);
   Bus1::bus_status();
   Bus2::bus_status();
   Bus3::bus_status();
   BOOST_CHECK_EQUAL(Bus1::bus.getPeers(), 2);
   BOOST_CHECK_EQUAL(Bus2::bus.getPeers(), 2);
   BOOST_CHECK_EQUAL(Bus3::bus.getPeers(), 2);
-  BOOST_CHECK_EQUAL(Bus3::bus.getUid(), 0);
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), Bus2::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), Bus3::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus3::bus.getNuid(), Bus1::bus.getUid());
 }
 
 BOOST_AUTO_TEST_CASE(test3parameters){
@@ -366,9 +308,6 @@ BOOST_AUTO_TEST_CASE(test3parameters){
   Bus1::bus_status();
   Bus2::bus_status();
   Bus3::bus_status();
-  BOOST_CHECK_EQUAL(Bus1::bus.getNuid(), Bus2::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus2::bus.getNuid(), Bus3::bus.getUid());
-  BOOST_CHECK_EQUAL(Bus3::bus.getNuid(), Bus1::bus.getUid());
   BOOST_CHECK_EQUAL(parameters[0x10], 0);
   BOOST_CHECK_EQUAL(parameters[0x20], 0);
   Bus1::bus.sendParameterChange(0x10, 0x1234);
