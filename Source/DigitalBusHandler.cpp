@@ -68,7 +68,7 @@ void DigitalBusHandler::startDiscover(){
 }
 
 void DigitalBusHandler::sendDiscover(uint8_t seq, uint32_t token){
-  std::cout << "disco tx [0x" << std::hex << (int)seq << "][" << token << "]" << std::endl;
+  // std::cout << "disco tx [0x" << std::hex << (int)seq << "][" << token << "]" << std::endl;
   sendFrame(OWL_COMMAND_DISCOVER|seq, token>>16, token>>8, token);
 }
 
