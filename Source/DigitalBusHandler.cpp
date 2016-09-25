@@ -18,8 +18,7 @@ void DigitalBusHandler::sendFrame(uint8_t d1, uint8_t d2, uint8_t d3, uint8_t d4
 }
 
 void DigitalBusHandler::sendFrame(uint8_t* frame){
-  // if(isMidiFrame(frame)) // todo: remove
-    serial_write(frame, 4);
+  serial_write(frame, 4);
 }
 
 uint32_t DigitalBusHandler::generateToken(){
@@ -82,74 +81,12 @@ void DigitalBusHandler::handleDiscover(uint8_t seq, uint32_t other){
     peers = seq;
     status = CONNECTED;
   }else{
-    if(seq < 0x0f)
-      // increment seq and pass it on
-      sendDiscover(seq+1, other);
-    // if(other < token)
-    //   uid = NO_UID; // we will not be UID 0
-    // if(status != ENUMERATE)
-    //   status = DISCOVER;
-    if(peers == 0)
+    if(DIGITAL_BUS_ENABLE_BUS && seq < 0x0f)      
+      sendDiscover(seq+1, other); // increment seq and pass it on
+    if(DIGITAL_BUS_ENABLE_BUS && peers == 0)
       startDiscover();
-    // if(peers != 0 && seq == peers-1 && uid == 0)
-    //   // this should be the last of the disco msgs and we are uid 0: start enum
-    //   startEnum();
   }
 }
-
-// void DigitalBusHandler::startEnum(){
-//   if(uid == 0){
-//     parameterOffset = 0;
-//     sendEnum(uid, VERSION, PRODUCT, parameterOffset+PARAMETERS);
-//   }
-// }
-
-// void DigitalBusHandler::sendEnum(uint8_t id, uint8_t version, uint8_t product, uint8_t params){
-//   sendFrame(OWL_COMMAND_ENUM|id, version, product, params);
-// }
-
-// void DigitalBusHandler::handleEnum(uint8_t id, uint8_t version, uint8_t product, uint8_t params){
-//   if(uid == NO_UID){
-//     // our UID has not been set yet
-//     // set it and pass on incremented value
-//     uid = id+1;
-//     parameterOffset = params;
-//     sendEnum(uid, VERSION, PRODUCT, parameterOffset+PARAMETERS);
-//     // note that only one ENUM should be received as they are not propagated.
-//     // downstream UID will be (uid+1 > peers) ? 0 : uid+1
-//   }
-//   if(nuid == NO_UID){
-//     nuid = uid+1;
-//     if(nuid > peers)
-//       nuid = 0;
-//   }
-//   status = IDENTIFY;
-// }
-
-// void DigitalBusHandler::startIdent(){
-//   sendIdent(uid, VERSION, PRODUCT, UUID);
-//   status = CONNECTED;
-// }
-
-// void DigitalBusHandler::sendIdent(uint8_t id, uint8_t version, uint8_t device, uint8_t* uuid){
-//   sendFrame(OWL_COMMAND_IDENT|uid, VERSION, PRODUCT, uuid[15]);
-//   sendFrame(OWL_COMMAND_IDENT|uid, uuid[14], uuid[13], uuid[12]);
-//   sendFrame(OWL_COMMAND_IDENT|uid, uuid[11], uuid[10], uuid[9]);
-//   sendFrame(OWL_COMMAND_IDENT|uid, uuid[8], uuid[7], uuid[6]);
-//   sendFrame(OWL_COMMAND_IDENT|uid, uuid[5], uuid[4], uuid[3]);
-//   sendFrame(OWL_COMMAND_IDENT|uid, uuid[2], uuid[1], uuid[0]);
-// }
-
-// /* void handleIdent(uint8_t id, uint8_t version, uint8_t device, uint8_t* uuid){ */
-// /*   if(id != uid && id != nuid) */
-// /*     sendIdent(id, version, device, uuid); // pass it on */
-// /* } */
-
-// void DigitalBusHandler::handleIdent(uint8_t id, uint8_t d1, uint8_t d2, uint8_t d3){
-//   // todo: need to wait for full set of 6 messages and buffer UUID?
-//   // no because uid is contained in every message
-//   // propagation done by DigitalBusReader
-// }
 
 void DigitalBusHandler::sendParameterChange(uint8_t pid, int16_t value){
   sendFrame(OWL_COMMAND_PARAMETER|peers, pid, value>>8, value);
@@ -157,17 +94,7 @@ void DigitalBusHandler::sendParameterChange(uint8_t pid, int16_t value){
 
 void DigitalBusHandler::handleParameterChange(uint8_t pid, int16_t value){
   bus_rx_parameter(pid, value);
-  // todo
-  // setParameterValue(pid, value);  
 }
-
-// void DigitalBusHandler::sendButtonChange(uint8_t bid, int16_t value){
-//   sendFrame(OWL_COMMAND_BUTTON|peers, bid, value>>8, value);
-// }
-
-// void DigitalBusHandler::handleButtonChange(uint8_t bid, int16_t value){
-//   bus_rx_button(bid, value);
-// }
 
 void DigitalBusHandler::sendCommand(uint8_t cmd, int16_t data){
   sendFrame(OWL_COMMAND_COMMAND|peers, cmd, data>>8, data);
@@ -198,7 +125,6 @@ void DigitalBusHandler::sendMessage(const char* msg){
   }
 }
 
-/* Received 3 bytes of string message */
 void DigitalBusHandler::handleMessage(const char* str){
   bus_rx_message(str);
 }
@@ -227,8 +153,7 @@ void DigitalBusHandler::handleData(const uint8_t* data, uint32_t len){
 }
 
 void DigitalBusHandler::sendReset(){
-  sendFrame(OWL_COMMAND_RESET, OWL_COMMAND_RESET, 
-	    OWL_COMMAND_RESET, OWL_COMMAND_RESET);
+  sendFrame(OWL_COMMAND_RESET, OWL_COMMAND_RESET, OWL_COMMAND_RESET, OWL_COMMAND_RESET);
 }
 
 bool DigitalBusHandler::isMidiFrame(uint8_t* frame){

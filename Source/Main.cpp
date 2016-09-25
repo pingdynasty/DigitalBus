@@ -19,6 +19,9 @@
 
 #define DIGITAL_BUS_RX_BUFFER_SIZE 128
 
+bool DIGITAL_BUS_PROPAGATE_MIDI = 1;
+bool DIGITAL_BUS_ENABLE_BUS = 1;
+
 /**
  * to test with virtual serial port / pty:
  * DigitalBus -p /dev/ptyp0
@@ -176,6 +179,9 @@ public:
               << "-p FILE\t set serial port" << std::endl
               << "-s NUM\t set serial speed (default: " << DEFAULT_SPEED << ")" << std::endl
               << "-v\t verbose, prints messages sent/received" << std::endl
+              << "-m\t monitor and forward messages but don't partake (todo)" << std::endl
+              << "--no-midi\t disable MIDI message forwarding" << std::endl
+              << "--no-bus\t disable bus messaging" << std::endl
               << "-i NUM\t set MIDI input device" << std::endl
               << "-o NUM\t set MIDI output device" << std::endl
               << "-c NAME\t create MIDI input/output device" << std::endl
@@ -284,12 +290,16 @@ public:
     case 230400:
       baud = B230400;
       break;
+#ifdef B460800
     case 460800:
       baud = B460800;
       break;
+#endif
+#ifdef B921600
     case 921600:
       baud = B921600;
       break;
+#endif
     }
     struct termios tio;
     int fd;
@@ -338,6 +348,10 @@ public:
         m_port = juce::String(argv[i]);
       }else if(arg.compare("-v") == 0){
         m_verbose = true;
+      }else if(arg.compare("--no-bus") == 0){
+	DIGITAL_BUS_ENABLE_BUS = false;
+      }else if(arg.compare("--no-midi") == 0){
+        DIGITAL_BUS_PROPAGATE_MIDI = false;
       }else if(arg.compare("-l") == 0){
         std::cout << "MIDI output devices:" << std::endl;
         listDevices(MidiOutput::getDevices());

@@ -9,13 +9,15 @@
 
 #define BUS_STATUS_IDLE        0x00
 #define BUS_STATUS_DISCO       0x01
-#define BUS_STATUS_ENUM        0x02
-#define BUS_STATUS_IDENT       0x04
-#define BUS_STATUS_CONNECTED   0x08
+#define BUS_STATUS_CONNECTED   0x02
 #define BUS_STATUS_ERROR       0xff
 
 #define BUS_CMD_CONFIGURE_IO   0x10
 
+   /* const bool DIGITAL_BUS_ENABLE_MIDI = 1; */
+   extern bool DIGITAL_BUS_PROPAGATE_MIDI;
+   extern bool DIGITAL_BUS_ENABLE_BUS;
+   
    void bus_setup();
    int bus_status();
    uint8_t* bus_deviceid();
