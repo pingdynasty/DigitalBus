@@ -8,7 +8,7 @@
 #endif
 
 #define BUS_STATUS_IDLE        0x00
-#define BUS_STATUS_DISCO       0x01
+#define BUS_STATUS_DISCOVER    0x01
 #define BUS_STATUS_CONNECTED   0x02
 #define BUS_STATUS_ERROR       0xff
 
