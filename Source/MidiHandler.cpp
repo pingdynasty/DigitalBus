@@ -2,7 +2,9 @@
 #include "MidiHandler.h"
 #include <iostream>
 
-void midi_write(uint8_t* data, size_t len);
+extern "C" {
+void midi_write(uint8_t* data, uint16_t len);
+}
 
 MidiHandler::MidiHandler(){
   // memset(midi_values, 0, NOF_PARAMETERS*sizeof(uint16_t));

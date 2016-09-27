@@ -28,8 +28,10 @@ bool DIGITAL_BUS_ENABLE_BUS = 1;
  * DigitalBus -p /dev/ttyp0
  */
 
-void serial_write(uint8_t* data, size_t len);
-void midi_write(uint8_t* data, size_t len);
+extern "C" {
+  void serial_write(uint8_t* data, uint16_t len);
+  void midi_write(uint8_t* data, uint16_t len);
+}
 
 class DigitalBusService : public juce::MidiInputCallback {
 private:
@@ -450,11 +452,11 @@ int main(int argc, char* argv[]) {
   return ret;
 }
 
-void serial_write(uint8_t* data, size_t len){
+void serial_write(uint8_t* data, uint16_t len){
   service.writeSerial(data, len);
 }
 
-void midi_write(uint8_t* data, size_t len){
+void midi_write(uint8_t* data, uint16_t len){
   service.writeMidi(data, len);
 }
 

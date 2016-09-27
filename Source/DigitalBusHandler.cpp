@@ -1,6 +1,5 @@
 #include "DigitalBusHandler.h"
 #include "MidiStatus.h"
-#include "serial.h"
 #include "bus.h"
 #include <string.h>
 
@@ -37,12 +36,6 @@ bool DigitalBusHandler::connected(){
   case DISCOVER:
     startDiscover();
     break;
-  // case ENUMERATE:
-  //   startEnum();
-  //   break;
-  // case IDENTIFY:
-  //   startIdent();
-  //   break;
   case CONNECTED:
     break;
   }
@@ -72,7 +65,7 @@ void DigitalBusHandler::sendDiscover(uint8_t seq, uint32_t token){
 }
 
 void DigitalBusHandler::handleDiscover(uint8_t seq, uint32_t other){
-  std::cout << "disco rx [0x" << std::hex << (int)seq << "][" << token << "][" << other << "]" << std::endl;
+  // std::cout << "disco rx [0x" << std::hex << (int)seq << "][" << token << "][" << other << "]" << std::endl;
   // on receipt of other token, add +1 to seq and pass it on, then send own token.
   // once we get our own token back, the seq tells us how many peers there are.
   // lowest token then takes precedence.
